@@ -9,17 +9,514 @@ output: github_document
 
 ```{r load-packages, message=FALSE}
 library(tidyverse) 
+library(ggplot2)
+library(MASS)
+library(tidyverse)
+library(viridis)
 ```
 
-### Exercise 1
+BTW In this lab, there are much random seeds needed, I choose the ultimate answer to life, the universe, and everything :
 
-Remove this text, and add your answer for Exercise 1 here.
-Add code chunks as needed.
-Don't forget to label your code chunk.
-Do not use spaces in code chunk labels.
+<span style="
+background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+-webkit-background-clip: text;
+color: transparent;">
+42
+</span>
+
+as the random seed.
+
+ALso Many of my visualizations also draw on your code, and I like viridis color:)
+
+### Exercise 1
+#### 1.1 
+
+```{r exercise-1-1}
+set.seed(42)
+age <- rnorm(100, mean = 30, sd = 5)
+df_colonists <- data.frame(
+  id = 1:100,
+  age = age
+)
+
+head(df_colonists)
+```
+
+#### 1.2 
+```{r age-histograms, message=FALSE}
+set.seed(100)
+age2 <- rnorm(100, mean = 30, sd = 5)
+
+set.seed(1000)
+age3 <- rnorm(100, mean = 30, sd = 5)
+
+df_hist <- data.frame(
+  age = c(age, age2, age3),
+  seed = c(
+    rep("Seed 42", length(age)),
+    rep("Seed 100", length(age2)),
+    rep("Seed 1000", length(age3))
+  )
+)
+
+ggplot(df_hist, aes(x = age, fill = seed)) +
+  geom_histogram(
+    position = "dodge",
+    breaks = seq(from = 5 * floor(min(age) / 5), to = 5 * ceiling(max(age) / 5), by = 5),
+    color = "black"
+  ) +
+  scale_fill_viridis_d() +
+  labs(title = "Histogram of Colonist Ages by Seed", x = "Age", y = "Frequency") +
+  theme_minimal()
+```
+
+All three distributions are centered around the mean of 30 and have a roughly normal shape, which is expected because they are all drawn from the same population distribution (mean = 30, sd = 5). 
+
+But each seed produces a different specific sample, the exact shape and spread of each histogram differs slightly. Besides since we only 100 observations a time, each draw will have more variation.
+
+
+#### 1.3
+
+```{r exercise-1-3}
+set.seed(42)
+
+df_colonists$role <- rep(c("engineer", "scientist", "medic"), length.out = 100)
+
+table(df_colonists$role)
+```
+I chose Method A: a repeating cycle of engineer -> scientist -> medic This ensures a nearly perfectly equal distribution across all three roles. For a Mars colony, having balanced roles is critical — we need roughly equal numbers of engineers (to maintain infrastructure), scientists (to conduct research), and medics (to keep everyone healthy). A repeating pattern ensures no role is underrepresented due to random chance.
+
+#### 1.4
+
+```{r exercise-1-4 ,echo=FALSE, message=FALSE}
+set.seed(42)
+df_colonists$marsgar <- runif(100, min = 50, max = 100)
+
+model <- lm(marsgar ~ age, data = df_colonists)
+intercept <- coef(model)[1]
+slope <- coef(model)[2]
+
+equation <- ifelse(slope >= 0,
+  sprintf("y == %.2f + %.2f * x", intercept, slope),
+  sprintf("y == %.2f %.2f * x", intercept, slope)
+)
+
+viridis_color <- viridis(1, option = "D")[1]
+
+ggplot(df_colonists, aes(x = age, y = marsgar)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = viridis_color, formula = "y ~ x") +
+  geom_label(x = Inf, y = Inf, label = equation, hjust = 1.1, vjust = 1.1,
+             parse = TRUE, color = viridis_color) +
+  labs(title = "Scatter Plot of Colonist Age and Health", x = "Age", y = "MARSGAR") +
+  theme_minimal()
+```
 
 ### Exercise 2
+#### 2.1
 
-...
+```{r exercise-2-1}
+set.seed(42)
+df_colonists$technical_skills <- 2 * df_colonists$age + rnorm(100, mean = 0, sd = 1)
 
-Add exercise headings as needed.
+
+model <- lm(technical_skills ~ age, data = df_colonists)
+intercept <- coef(model)[1]
+slope <- coef(model)[2]
+
+equation <- ifelse(slope >= 0,
+  sprintf("y == %.2f + %.2f * x", intercept, slope),
+  sprintf("y == %.2f %.2f * x", intercept, slope)
+)
+
+ggplot(df_colonists, aes(x = age, y = technical_skills)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, formula = "y ~ x") +
+  geom_label(x = Inf, y = Inf, label = equation, hjust = 1.1, vjust = 1.1,
+             parse = TRUE, color = viridis_color) +
+  labs(title = "Scatter Plot of Colonist Age and Technical Skills",
+       x = "Age", y = "Technical Skills") +
+  theme_minimal()
+```
+
+#### 2.2
+Here I understand the problem-solving skill as the ability of *finding* and *resolving* a fancy problem.
+
+SO:
+For Scientists: highest problem-solving (mean = 80 SD= 10),  ~~as I'm a Researcher~~ as they focus on analytical research and that's how I understand the problem-solving skill.
+
+For Engineers: moderate problem-solving (mean = 70 SD= 10),  ~~as I'm not an Engineer~~ as they need to diagnose and fix complex technical systems on Mars. 
+
+For medic: not so much problem-solving (mean = 60 SD= 10), No offense as they their expertise is more specialized in medical knowledge rather than general problem-solving. 
+
+
+```{r exercise-2-2}
+set.seed(42)
+df_colonists$problem_solving[df_colonists$role == "scientist"] = rnorm(sum(df_colonists$role == "scientist"), mean = 80, sd = 10)
+df_colonists$problem_solving[df_colonists$role == "engineer"] = rnorm(sum(df_colonists$role == "engineer"), mean = 70, sd = 10)
+df_colonists$problem_solving[df_colonists$role == "medic"] = rnorm(sum(df_colonists$role == "medic"), mean = 60, sd = 10)
+```
+
+```{r density-problem-solving, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(df_colonists, aes(x = problem_solving, fill = role)) +
+  geom_density(alpha = .6) +
+  labs(title = "Distribution of Problem Solving by Role",
+       x = "Problem Solving", y = "Density") +
+  scale_fill_viridis_d() +
+  theme_minimal()
+```
+
+
+### Exercise 3
+#### 3.1
+
+```{r exercise-3-1}
+set.seed(42)
+
+mean_traits_2var <- c(50, 50)
+cov_matrix_2var <- matrix(c(
+  100, 50,
+  50, 100
+), ncol = 2)
+traits_data <- mvrnorm(n = 100, mu = mean_traits_2var, Sigma = cov_matrix_2var, empirical = FALSE)
+colnames(traits_data) <- c("resilience", "agreeableness")
+
+df_colonists <- cbind(df_colonists, traits_data)
+```
+
+
+```{r scatterplot-resilience-agreeableness, echo=FALSE, message=FALSE}
+model <- lm(resilience ~ agreeableness, data = df_colonists)
+intercept <- coef(model)[1]
+slope <- coef(model)[2]
+
+equation <- ifelse(slope >= 0,
+  sprintf("y == %.2f + %.2f * x", intercept, slope),
+  sprintf("y == %.2f %.2f * x", intercept, slope)
+)
+
+ggplot(df_colonists, aes(x = agreeableness, y = resilience)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = viridis_color, formula = "y ~ x") +
+  geom_label(x = Inf, y = Inf, label = equation, hjust = 1.1, vjust = 1.1,
+             parse = TRUE, color = viridis_color) +
+  labs(title = "Scatter Plot of Colonist Resilience and Agreeableness",
+       x = "Agreeableness", y = "Resilience") +
+  theme_minimal()
+```
+
+#### 3.2
+
+```{r exercise-3-2, message=FALSE}
+
+set.seed(42)
+n_colonists <- 100
+var_names <- c("EX", "ES", "AG", "CO", "OP")
+mean_traits <- c(-0.5, 0.5, 0.25, 0.5, 0)  
+sd_traits <- c(1, 0.9, 1, 1, 1) 
+
+# Correlation matrix from Park et al. (2020)
+cor_matrix_bigfive <- matrix(
+  c(
+    1.0000, 0.2599, 0.1972, 0.1860, 0.2949,
+    0.2599, 1.0000, 0.1576, 0.2306, 0.0720,
+    0.1972, 0.1576, 1.0000, 0.2866, 0.1951,
+    0.1860, 0.2306, 0.2866, 1.0000, 0.1574,
+    0.2949, 0.0720, 0.1951, 0.1574, 1.0000
+  ),
+  nrow = 5, ncol = 5, byrow = TRUE,
+  dimnames = list(var_names, var_names)
+)
+
+cov_matrix_bigfive <- cor_matrix_bigfive * (sd_traits %*% t(sd_traits))
+
+simulated_data <- mvrnorm(n = n_colonists, mu = mean_traits, Sigma = cov_matrix_bigfive)
+
+simulated_data <- cbind.data.frame(
+  colonist_id = 1:n_colonists,
+  simulated_data
+)
+head(simulated_data)
+```
+
+Compare simulated statistics with population parameters:
+
+```{r compare-stats-3-3, message=FALSE}
+# means
+summary_stats_mean <- simulated_data %>%
+  dplyr::select(-colonist_id,) %>%
+  summarize(across(everything(), list(mean = mean))) %>%
+  rbind(mean_traits)
+#  SDs
+summary_stats_sd <- simulated_data %>%
+  dplyr::select(-colonist_id,) %>%
+  summarize(across(everything(), list(sd = sd))) %>%
+  rbind(sd_traits)
+
+summary_stats <- cbind(summary_stats_mean, summary_stats_sd)
+rownames(summary_stats) <- c("Simulated", "Population")
+summary_stats
+
+
+
+# Compare correlation matrices
+simulated_data %>%
+  dplyr::select(-colonist_id,) %>%
+  cor() %>%
+  round(4)
+round(cor_matrix_bigfive, 4)
+```
+
+wrapp the whole procedure into a function:
+```{r exercise-3-2 repeat, message=FALSE}
+simulate_colonists <- function(seed,
+                               n_colonists = 100,
+                               mean_traits = c(-0.5, 0.5, 0.25, 0.5, 0),
+                               sd_traits = c(1, 0.9, 1, 1, 1),
+                               var_names = c("EX", "ES", "AG", "CO", "OP")) {
+  
+  # Load required package
+  if (!requireNamespace("MASS", quietly = TRUE)) {
+    stop("Package 'MASS' is required but not installed.")
+  }
+  
+  # Set seed
+  set.seed(seed)
+
+  cor_matrix_bigfive <- matrix(
+    c(
+      1.0000, 0.2599, 0.1972, 0.1860, 0.2949,
+      0.2599, 1.0000, 0.1576, 0.2306, 0.0720,
+      0.1972, 0.1576, 1.0000, 0.2866, 0.1951,
+      0.1860, 0.2306, 0.2866, 1.0000, 0.1574,
+      0.2949, 0.0720, 0.1951, 0.1574, 1.0000
+    ),
+    nrow = 5, ncol = 5, byrow = TRUE,
+    dimnames = list(var_names, var_names)
+  )
+  
+  cov_matrix_bigfive <- cor_matrix_bigfive * (sd_traits %*% t(sd_traits))
+  
+  simulated_data <- MASS::mvrnorm(
+    n = n_colonists,
+    mu = mean_traits,
+    Sigma = cov_matrix_bigfive
+  )
+  
+  simulated_data <- cbind.data.frame(
+    colonist_id = 1:n_colonists,
+    seed = seed,
+    simulated_data
+  )
+  
+  summary_stats_mean <- simulated_data %>%
+    dplyr::select(-colonist_id, -seed) %>%
+    dplyr::summarize(dplyr::across(everything(), list(mean = mean))) %>%
+    rbind(mean_traits)
+  
+  summary_stats_sd <- simulated_data %>%
+    dplyr::select(-colonist_id, -seed) %>%
+    dplyr::summarize(dplyr::across(everything(), list(sd = sd))) %>%
+    rbind(sd_traits)
+
+  summary_stats <- cbind(summary_stats_mean, summary_stats_sd)
+  rownames(summary_stats) <- c("Simulated", "Population")
+  
+  simulated_cor <- simulated_data %>%
+    dplyr::select(-colonist_id, -seed) %>%
+    cor() %>%
+    round(4)
+  
+  population_cor <- round(cor_matrix_bigfive, 4)
+  
+  # Return results as a list
+  return(list(
+    seed = seed,
+    data = simulated_data,
+    summary_table = summary_stats,
+    simulated_correlation = simulated_cor,
+    population_correlation = population_cor
+  ))
+}
+
+res1 <- simulate_colonists(111)
+res2 <- simulate_colonists(123)
+res3 <- simulate_colonists(456)
+res4 <- simulate_colonists(789)
+res5 <- simulate_colonists(999)
+
+comparison_table <- dplyr::bind_rows(
+  cbind(seed = 111, res1$summary_table[1, ]),
+  cbind(seed = 123, res2$summary_table[1, ]),
+  cbind(seed = 456, res3$summary_table[1, ]),
+  cbind(seed = 789, res4$summary_table[1, ]),
+  cbind(seed = 999, res5$summary_table[1, ])
+)
+
+population_row <- data.frame(
+  seed = "Population",
+  EX_mean = mean_traits[1],
+  ES_mean = mean_traits[2],
+  AG_mean = mean_traits[3],
+  CO_mean = mean_traits[4],
+  OP_mean = mean_traits[5],
+  EX_sd = sd_traits[1],
+  ES_sd = sd_traits[2],
+  AG_sd = sd_traits[3],
+  CO_sd = sd_traits[4],
+  OP_sd = sd_traits[5]
+)
+
+
+comparison1_table <- rbind(population_row, comparison_table)
+rownames(comparison1_table) <- NULL
+
+comparison1_table
+
+cor_results <- list(
+  Population = res1$population_correlation,
+  Seed_111 = res1$simulated_correlation,
+  Seed_123 = res2$simulated_correlation,
+  Seed_456 = res3$simulated_correlation,
+  Seed_789 = res4$simulated_correlation,
+  Seed_999 = res5$simulated_correlation
+)
+
+cor_results
+
+```
+
+
+Overal, the simulated means and SDs are close to the population parameters, but not identical. Similarly, the simulated correlation matrix aare close to the population correlation matrix from Park, but not identical. this is expected with a sample of only 100.
+
+
+
+### Exercise 4
+#### 4.1
+```{r exercise-4-1, message=FALSE, echo=FALSE}
+cor_matrix_bigfive <- matrix(
+  c(
+    1.0000, 0.2599, 0.1972, 0.1860, 0.2949,
+    0.2599, 1.0000, 0.1576, 0.2306, 0.0720,
+    0.1972, 0.1576, 1.0000, 0.2866, 0.1951,
+    0.1860, 0.2306, 0.2866, 1.0000, 0.1574,
+    0.2949, 0.0720, 0.1951, 0.1574, 1.0000
+  ),
+  nrow = 5, ncol = 5, byrow = TRUE,
+  dimnames = list(var_names, var_names)
+)
+cov_matrix_bigfive <- cor_matrix_bigfive * (sd_traits %*% t(sd_traits))
+
+set.seed(42)
+num_simulations <- 100
+all_simulations <- data.frame()
+
+for (i in 1:num_simulations) {
+  sim_data <- mvrnorm(n = n_colonists, mu = mean_traits, Sigma = cov_matrix_bigfive)
+  
+  sim_data <- cbind.data.frame(
+    colonist_id = 1:n_colonists,
+    rep = i,
+    sim_data
+  )
+  
+  all_simulations <- rbind(all_simulations, sim_data)
+}
+
+
+summary_stats_by_rep <- all_simulations %>%
+  group_by(rep) %>%
+  dplyr::select(-colonist_id) %>%
+  summarize(
+    EX_mean = mean(EX),
+    EX_sd = sd(EX),
+    OP_mean = mean(OP),
+    OP_sd = sd(OP),
+    cor_EX_OP = cor(EX, OP)
+  )
+
+head(summary_stats_by_rep)
+```
+
+
+#### 4.2
+```{r exercise-4-2mean, message=FALSE, warning=FALSE}
+ggplot(summary_stats_by_rep, aes(x = EX_mean)) +
+  geom_histogram(fill = viridis(1, option = "D"), color = "black", bins = 20, alpha = 0.7) +
+  geom_vline(xintercept = mean_traits[1], color = "black", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = mean_traits[1], y = Inf, vjust = 2, hjust = -0.1,
+           label = paste("Population mean =", mean_traits[1]), color = "black") +
+  labs(title = "Distribution of Mean Extraversion Across 100 Colonies",
+       x = "Mean Extraversion", y = "Count") +
+  theme_minimal()
+```
+```{r exercise-4-2sd, message=FALSE, warning=FALSE}
+ggplot(summary_stats_by_rep, aes(x = EX_sd)) +
+  geom_histogram(fill = viridis(1, option = "D"), color = "black", bins = 20, alpha = 0.7) +
+  geom_vline(xintercept = sd_traits[1], color = "black", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = sd_traits[1], y = Inf, vjust = 2, hjust = -0.1,
+           label = paste("Population SD =", sd_traits[1]), color = "black") +
+  labs(title = "Distribution of SD of Extraversion Across 100 Colonies",
+       x = "SD Extraversion", y = "Count") +
+  theme_minimal()
+```
+
+```{r exercise-4-2cor, message=FALSE, warning=FALSE}
+# Distribution of correlation between Extraversion and Openness
+pop_cor_EX_OP <- cor_matrix_bigfive["EX", "OP"]
+
+ggplot(summary_stats_by_rep, aes(x = cor_EX_OP)) +
+  geom_histogram(fill = viridis(1, option = "D"), color = "black", bins = 20, alpha = 0.7) +
+  geom_vline(xintercept = pop_cor_EX_OP, color = "black", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = pop_cor_EX_OP, y = Inf, vjust = 2, hjust = -0.1,
+           label = paste("Population r =", round(pop_cor_EX_OP, 4)), color = "black") +
+  labs(title = "Distribution of Correlation (EX & OP) Across 100 Colonies",
+       x = "Correlation (Extraversion & Openness)", y = "Count") +
+  theme_minimal()
+```
+
+although the population correlation is fixed, the correlation between extraversion and openness varies across colonies,  Most simulated correlations cluster around the population parameter, but individual colonies produce slightly different estimates due to sampling variability. Each colony represents a random sample, and if the sample size were smaller, the distribution of correlations would be wider, indicating less stable estimates. (that's the conception of standard error???) Increasing the sample size reduces sampling error and leads to more consistent estimates. 
+
+As for the ideal sample size, I think there might be some diminishing returns involved, so perhaps there's an optimal range, but I suspect there may be other factors need to be considered.
+
+### Stretch Task 
+#### 5.1.** Simulate colonies at varying sample sizes and plot the average covariance:
+
+```{r exercise-5, message=FALSE, warning=FALSE}
+set.seed(42)
+sample_sizes <- seq(10, 500, by = 30)
+repetitions_per_condition <- 20
+mean_skills <- c(50, 50)
+cov_skills <- matrix(c(100, 50, 50, 100), ncol = 2)
+
+simulation_results_cov <- data.frame(
+  SampleSize = integer(),
+  Repetition = integer(),
+  Covariance = numeric()
+)
+
+for (size in sample_sizes) {
+  for (rep in 1:repetitions_per_condition) {
+    skills_data <- mvrnorm(n = size, mu = mean_skills, Sigma = cov_skills, empirical = FALSE)
+    current_covariance <- cov(skills_data[, 1], skills_data[, 2])
+    
+    simulation_results_cov <- rbind(simulation_results_cov, data.frame(
+      SampleSize = size,
+      Repetition = rep,
+      Covariance = current_covariance
+    ))
+  }
+}
+
+simulation_results_cov$SampleSize_factor <- as.factor(simulation_results_cov$SampleSize)
+
+ggplot(simulation_results_cov, aes(x = Covariance, fill = SampleSize_factor)) +
+  geom_density(alpha = 0.6) +
+  labs(title = "Covariance Distribution by Sample Size",
+       x = "Covariance", y = "Density", fill = "Sample Size") +
+  scale_fill_viridis_d() +
+  theme_minimal()
+```
+
+All these things seems to tell me waht is the law of large numbers.
+
